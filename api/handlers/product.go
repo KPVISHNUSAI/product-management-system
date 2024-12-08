@@ -1,18 +1,28 @@
 package handlers
 
 import (
-	"github.com/KPVISHNUSAI/product-management-system/api/services"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+
+	"github.com/KPVISHNUSAI/product-management-system/api/models"
+	"github.com/KPVISHNUSAI/product-management-system/api/services"
+	"github.com/gin-gonic/gin"
 )
 
 type ProductHandler struct {
-	productService *services.ProductService
+	productService ProductService
 }
 
-func NewProductHandler(service *services.ProductService) *ProductHandler {
-	return &ProductHandler{productService: service}
+type ProductService interface {
+	CreateProduct(req *services.CreateProductRequest) (*models.Product, error)
+	GetProduct(id uint) (*models.Product, error)
+	GetUserProducts(userID uint) ([]models.Product, error)
+}
+
+func NewProductHandler(service ProductService) *ProductHandler {
+	return &ProductHandler{
+		productService: service,
+	}
 }
 
 func (h *ProductHandler) CreateProduct(c *gin.Context) {

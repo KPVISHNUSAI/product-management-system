@@ -1,4 +1,4 @@
-﻿-- Up Migration: Create app_users table
+-- +goose Up
 CREATE TABLE app_users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -7,3 +7,6 @@ CREATE TABLE app_users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- +goose Down
+DROP TABLE IF EXISTS app_users;

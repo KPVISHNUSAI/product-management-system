@@ -3,29 +3,37 @@ package cache
 import (
 	"context"
 	"encoding/json"
-	"github.com/go-redis/redis/v8"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
-type RedisClient struct {
+type RedisCache struct {
 	client *redis.Client
 }
 
-func NewRedisClient(addr, password string) (*RedisClient, error) {
+type RedisConfig struct {
+	Host     string
+	Port     string
+	Password string
+}
+
+func NewRedisCache(addr string, password string) (*RedisCache, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
+		Addr:     addr, // format should be "host:port"
 		Password: password,
 		DB:       0,
 	})
 
-	if err := client.Ping(context.Background()).Err(); err != nil {
+	ctx := context.Background()
+	if err := client.Ping(ctx).Err(); err != nil {
 		return nil, err
 	}
 
-	return &RedisClient{client: client}, nil
+	return &RedisCache{client: client}, nil
 }
 
-func (c *RedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+func (c *RedisCache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -33,7 +41,7 @@ func (c *RedisClient) Set(ctx context.Context, key string, value interface{}, ex
 	return c.client.Set(ctx, key, data, expiration).Err()
 }
 
-func (c *RedisClient) Get(ctx context.Context, key string, dest interface{}) error {
+func (c *RedisCache) Get(ctx context.Context, key string, dest interface{}) error {
 	data, err := c.client.Get(ctx, key).Bytes()
 	if err != nil {
 		return err
@@ -41,6 +49,30 @@ func (c *RedisClient) Get(ctx context.Context, key string, dest interface{}) err
 	return json.Unmarshal(data, dest)
 }
 
-func (c *RedisClient) Delete(ctx context.Context, key string) error {
+func (c *RedisCache) BatchGet(ctx context.Context, keys []string) (map[string]interface{}, error) {
+	pipe := c.client.Pipeline()
+	cmds := make(map[string]*redis.StringCmd)
+
+	for _, key := range keys {
+		cmds[key] = pipe.Get(ctx, key)
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil && err != redis.Nil {
+		return nil, err
+	}
+
+	result := make(map[string]interface{})
+	for key, cmd := range cmds {
+		data, err := cmd.Result()
+		if err == nil {
+			result[key] = data
+		}
+	}
+
+	return result, nil
+}
+
+func (c *RedisCache) Delete(ctx context.Context, key string) error {
 	return c.client.Del(ctx, key).Err()
 }

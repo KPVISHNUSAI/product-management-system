@@ -1,6 +1,9 @@
 package logger
 
 import (
+	"time"
+
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -62,5 +65,25 @@ func getLogLevel(level string) zapcore.Level {
 		return zapcore.ErrorLevel
 	default:
 		return zapcore.InfoLevel
+	}
+}
+
+func AddRequestLogging(logger *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		query := c.Request.URL.RawQuery
+
+		c.Next()
+
+		logger.Info("request",
+			zap.String("path", path),
+			zap.String("query", query),
+			zap.Int("status", c.Writer.Status()),
+			zap.Duration("latency", time.Since(start)),
+			zap.String("ip", c.ClientIP()),
+			zap.String("method", c.Request.Method),
+			zap.String("user_agent", c.Request.UserAgent()),
+		)
 	}
 }

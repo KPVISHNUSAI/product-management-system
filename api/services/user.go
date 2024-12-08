@@ -1,29 +1,39 @@
 package services
 
 import (
+	"time"
+
 	"github.com/KPVISHNUSAI/product-management-system/api/models"
-	"github.com/KPVISHNUSAI/product-management-system/api/repository/postgres"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
-	"time"
 )
 
-type UserService struct {
-	userRepo  *postgres.UserRepository
-	jwtSecret string
-}
-
-func NewUserService(repo *postgres.UserRepository, jwtSecret string) *UserService {
-	return &UserService{
-		userRepo:  repo,
-		jwtSecret: jwtSecret,
-	}
+type UserRepository interface {
+	Create(user *models.AppUser) error
+	GetByEmail(email string) (*models.AppUser, error)
 }
 
 type CreateUserRequest struct {
 	Email    string `json:"email"`
 	Name     string `json:"name"`
 	Password string `json:"password"`
+}
+
+type UserService struct {
+	userRepo  UserRepository
+	jwtSecret string
+}
+
+func NewUserService(repo UserRepository, jwtSecret string) *UserService {
+	return &UserService{
+		userRepo:  repo,
+		jwtSecret: jwtSecret,
+	}
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
 }
 
 func (s *UserService) CreateUser(req *CreateUserRequest) (*models.AppUser, error) {

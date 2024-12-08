@@ -13,6 +13,11 @@ type Config struct {
 		Password string
 		DBName   string
 	}
+	Redis struct {
+		Host     string
+		Port     string
+		Password string
+	}
 	RabbitMQ struct {
 		URL string
 	}
@@ -34,6 +39,9 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("POSTGRES_PASSWORD", "postgres")
 	viper.SetDefault("POSTGRES_DB", "product_management")
 	viper.SetDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
+	viper.SetDefault("REDIS_HOST", "localhost")
+	viper.SetDefault("REDIS_PORT", "6379")
+	viper.SetDefault("AWS_REGION", "ap-southeast-2")
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
@@ -50,6 +58,9 @@ func LoadConfig() (*Config, error) {
 	config.AWS.Bucket = viper.GetString("AWS_BUCKET_NAME")
 	config.AWS.AccessKey = viper.GetString("AWS_ACCESS_KEY")
 	config.AWS.SecretKey = viper.GetString("AWS_SECRET_KEY")
+	config.Redis.Host = viper.GetString("REDIS_HOST")
+	config.Redis.Port = viper.GetString("REDIS_PORT")
+	config.Redis.Password = viper.GetString("REDIS_PASSWORD")
 
 	return &config, nil
 }
