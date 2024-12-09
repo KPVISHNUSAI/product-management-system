@@ -197,7 +197,7 @@ Authorization: Bearer <token>
 
 #### **List User Products**
 ```http
-GET /api/products?user_id=1
+GET /api/products/filter/?user_id=1&min_price=10.0&max_price=100.0&product_name=test
 Authorization: Bearer <token>
 ```
 
