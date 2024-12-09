@@ -33,6 +33,13 @@ A **scalable backend system** built with **Go** for managing products, featuring
 
 ---
 
+## 🎥 Demonstration Video
+
+Demonstration: [https://drive.google.com/file/d/1HgvUf9p9DRH8J3Sha-spk_v3YhDxJd2X/view?usp=sharing](https://drive.google.com/file/d/1HgvUf9p9DRH8J3Sha-spk_v3YhDxJd2X/view?usp=sharing)
+
+Click the preview above to watch the full video.
+
+---
 ## 🚀 Quick Start  
 
 ### Clone and Setup
@@ -61,6 +68,7 @@ go run image-processor/main.go
 ```
 
 ---
+
 
 ## ⚙️ Project Structure
 ```plaintext
