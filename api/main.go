@@ -21,6 +21,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("RabbitMQ URL from config:", cfg.RabbitMQ.URL)
 
 	// Initialize logger
 	logger, _ := zap.NewProduction()
@@ -91,7 +92,7 @@ func main() {
 		{
 			products.POST("/", productHandler.CreateProduct)
 			products.GET("/:id", productHandler.GetProduct)
-			products.GET("/", productHandler.GetUserProducts)
+			products.GET("/filter", productHandler.GetFilteredProducts)
 		}
 	}
 

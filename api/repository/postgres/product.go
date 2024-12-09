@@ -18,6 +18,10 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
+func (r *ProductRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
 func (r *ProductRepository) Create(product *models.Product) error {
 	// First verify user exists
 	var user models.AppUser
@@ -42,6 +46,24 @@ func (r *ProductRepository) GetByID(id uint) (*models.Product, error) {
 func (r *ProductRepository) GetByUserID(userID uint) ([]models.Product, error) {
 	var products []models.Product
 	err := r.db.Table("app_products").Where("user_id = ?", userID).Find(&products).Error
+	return products, err
+}
+
+func (r *ProductRepository) GetFilteredProducts(userID uint, minPrice, maxPrice float64, productName string) ([]models.Product, error) {
+	var products []models.Product
+	query := r.db.Table("app_products").Where("user_id = ?", userID)
+
+	if minPrice > 0 {
+		query = query.Where("product_price >= ?", minPrice)
+	}
+	if maxPrice > 0 {
+		query = query.Where("product_price <= ?", maxPrice)
+	}
+	if productName != "" {
+		query = query.Where("LOWER(product_name) LIKE ?", "%"+productName+"%")
+	}
+
+	err := query.Find(&products).Error
 	return products, err
 }
 

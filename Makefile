@@ -1,4 +1,4 @@
-.PHONY: build run test docker-up docker-down migrate-up migrate-down goose-up goose-down goose-status
+.PHONY: build run test test-unit test-integration test-benchmark docker-up docker-down migrate-up migrate-down goose-up goose-down goose-status db-create db-drop db-reset
 
 build:
 	go build -o bin/api ./api
@@ -7,8 +7,18 @@ build:
 run:
 	go run ./api
 
+# Test targets
 test:
-	go test ./...
+	go test ./... -v
+
+test-unit:
+	go test ./api/tests/unit/... -v
+
+test-integration:
+	go test ./api/tests/integration/... -v
+
+test-benchmark:
+	go test ./api/tests/benchmark/... -bench=. -v
 
 docker-up:
 	docker-compose up --build -d

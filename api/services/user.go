@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/KPVISHNUSAI/product-management-system/api/models"
@@ -33,25 +34,33 @@ func NewUserService(repo UserRepository, jwtSecret string) *UserService {
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
+	if err != nil {
+		return "", fmt.Errorf("failed to hash password: %v", err)
+	}
+	return string(bytes), nil
 }
 
 func (s *UserService) CreateUser(req *CreateUserRequest) (*models.AppUser, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	// Hash the password
+	hashedPassword, err := HashPassword(req.Password)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to hash password: %v", err)
 	}
 
+	// Create user object
 	user := &models.AppUser{
 		Email:    req.Email,
 		Name:     req.Name,
-		Password: string(hashedPassword),
+		Password: hashedPassword,
 	}
 
+	// Store the user in the database
 	if err := s.userRepo.Create(user); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create user: %v", err)
 	}
 
+	// Return the user without the password field
+	user.Password = "" // Ensure password is not exposed
 	return user, nil
 }
 

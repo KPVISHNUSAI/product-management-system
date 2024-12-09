@@ -25,6 +25,7 @@ type ProductRepository interface {
 	Update(product *models.Product) error
 	UpdateProcessingStatus(id uint, status string) error
 	UpdateCompressedImages(id uint, images pq.StringArray) error
+	GetFilteredProducts(userID uint, minPrice, maxPrice float64, productName string) ([]models.Product, error)
 }
 
 type Cache interface {
@@ -37,6 +38,13 @@ type ProductService struct {
 	productRepo ProductRepository
 	mqPublisher messaging.Publisher
 	cache       Cache
+}
+
+type FilterProductsRequest struct {
+	UserID      uint    `json:"user_id"`
+	MinPrice    float64 `json:"min_price"`
+	MaxPrice    float64 `json:"max_price"`
+	ProductName string  `json:"product_name"`
 }
 
 const (
@@ -141,6 +149,30 @@ func (s *ProductService) GetProduct(id uint) (*models.Product, error) {
 
 func (s *ProductService) GetUserProducts(userID uint) ([]models.Product, error) {
 	return s.productRepo.GetByUserID(userID)
+}
+
+func (s *ProductService) GetFilteredProducts(req *FilterProductsRequest) ([]models.Product, error) {
+	ctx := context.Background()
+	cacheKey := fmt.Sprintf("%s%d:minPrice:%f:maxPrice:%f:productName:%s",
+		listCachePrefix, req.UserID, req.MinPrice, req.MaxPrice, req.ProductName)
+
+	var products []models.Product
+	err := s.cache.Get(ctx, cacheKey, &products)
+	if err == nil {
+		return products, nil
+	}
+	s.handleCacheError(err, "get")
+
+	products, err = s.productRepo.GetFilteredProducts(req.UserID, req.MinPrice, req.MaxPrice, req.ProductName)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.cache.Set(ctx, cacheKey, products, s.getCacheDuration("list")); err != nil {
+		s.handleCacheError(err, "set")
+	}
+
+	return products, nil
 }
 
 func (s *ProductService) queueImageProcessing(task ImageProcessingTask) error {

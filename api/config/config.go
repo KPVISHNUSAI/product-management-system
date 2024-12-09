@@ -19,10 +19,10 @@ type Config struct {
 	Redis struct {
 		Host     string
 		Port     string
-		Password string // Added password field
+		Password string
 	}
 	RabbitMQ struct {
-		URL      string // Added for connection string
+		URL      string
 		Host     string
 		Port     string
 		User     string

@@ -38,7 +38,7 @@ A **scalable backend system** built with **Go** for managing products, featuring
 ### Clone and Setup
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/product-management-system.git
+git clone https://github.com/KPVISHNUSAI/product-management-system.git
 cd product-management-system
 
 # Configure environment variables
@@ -84,6 +84,18 @@ product-management-system/
 │   ├── services/                   
 │   │   ├── user.go                # User business logic
 │   │   └── product.go             # Product business logic
+│   ├── tests/       
+│   │   └── unit/
+│   │          └── handlers/
+│   │                   └──product_test.go    
+│   │          └── services/
+│   │                   ├── product_test.go    
+│   │                   └──user_test.go    
+│   │   └── integration/
+│   │                   └──api_test.go   
+│   │   └── benchmark/
+│   │                   └──product_test.go   
+
 │   └── main.go                    # API entry point
 │
 ├── image-processor/               # Image Processing Service

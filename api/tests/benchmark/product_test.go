@@ -2,93 +2,94 @@
 package benchmark
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/KPVISHNUSAI/product-management-system/api/models"
 	"github.com/KPVISHNUSAI/product-management-system/api/repository/postgres"
 	"github.com/KPVISHNUSAI/product-management-system/api/services"
 	"github.com/KPVISHNUSAI/product-management-system/pkg/cache"
 	"github.com/KPVISHNUSAI/product-management-system/pkg/database"
-	"gorm.io/gorm"
 )
 
-type ProductService interface {
-	GetProduct(id uint) (*models.Product, error)
-	GetUserProducts(userID uint) ([]models.Product, error)
-	CreateProduct(req *services.CreateProductRequest) (*models.Product, error)
-}
-
-func setupBenchmarkDB() *gorm.DB {
+func setupBenchmarkEnvironment(b *testing.B) (*services.ProductService, *postgres.ProductRepository, *cache.RedisCache) {
+	// Initialize database connection
 	db, err := database.NewPostgresDB(
 		"localhost",
 		"5431",
 		"postgres",
 		"postgres",
-		"product_management_test",
+		"product_management",
 	)
 	if err != nil {
-		panic(err)
+		b.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Seed test data
-	seedTestData(db)
-	return db
-}
-
-func setupBenchmarkCache() *cache.RedisCache {
-	redisCache, err := cache.NewRedisCache("localhost:6379", "redis")
+	// Initialize Redis cache
+	redisCache, err := cache.NewRedisCache("localhost:6379", "")
 	if err != nil {
-		panic(err)
+		b.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	return redisCache
+
+	// Initialize repository and service
+	repo := postgres.NewProductRepository(db)
+	service := services.NewProductService(repo, nil, redisCache)
+
+	return service, repo, redisCache
 }
 
-func seedTestData(db *gorm.DB) {
+func seedBenchmarkData(b *testing.B, repo *postgres.ProductRepository) {
 	// Create test user
 	user := &models.AppUser{
-		Email: "test@example.com",
-		Name:  "Test User",
+		Email: "benchmark@example.com",
+		Name:  "Benchmark User",
 	}
+	db := repo.GetDB()
 	db.Create(user)
 
-	// Create 100 test products
+	// Create test products
 	for i := 0; i < 100; i++ {
 		product := &models.Product{
-			UserID:       user.ID,
-			ProductName:  fmt.Sprintf("Product %d", i),
-			ProductPrice: 99.99,
+			UserID:             user.ID,
+			ProductName:        fmt.Sprintf("Product %d", i),
+			ProductDescription: fmt.Sprintf("Description for product %d", i),
+			ProductPrice:       float64(50 + i),
+			ProcessingStatus:   "completed",
 		}
 		db.Create(product)
 	}
 }
 
 func BenchmarkGetProduct(b *testing.B) {
-	db := setupBenchmarkDB()
-	repo := postgres.NewProductRepository(db)
-	service := setupBenchmarkService()
+	service, repo, _ := setupBenchmarkEnvironment(b)
+	seedBenchmarkData(b, repo)
 
 	b.Run("With Cache", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, _ = service.GetProduct(1)
+			service.GetProduct(1)
 		}
 	})
 
 	b.Run("Without Cache", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			_, _ = repo.GetByID(1)
+			repo.GetByID(1)
 		}
 	})
 }
 
 func BenchmarkCreateProduct(b *testing.B) {
-	service := setupBenchmarkService()
+	service, _, _ := setupBenchmarkEnvironment(b)
+
 	req := &services.CreateProductRequest{
-		UserID: 1,
-		Name:   "Benchmark Product",
-		Price:  99.99,
+		UserID:      1,
+		Name:        "Benchmark Product",
+		Description: "Product for benchmark testing",
+		Price:       99.99,
+		Images:      []string{"test.jpg"},
 	}
 
 	b.ResetTimer()
@@ -97,25 +98,63 @@ func BenchmarkCreateProduct(b *testing.B) {
 	}
 }
 
-func BenchmarkUserProductsList(b *testing.B) {
-	service := setupBenchmarkService()
+func BenchmarkGetFilteredProducts(b *testing.B) {
+	service, repo, _ := setupBenchmarkEnvironment(b)
+	seedBenchmarkData(b, repo)
 
-	b.Run("Small List (10 items)", func(b *testing.B) {
+	b.Run("Small Result Set (10 products)", func(b *testing.B) {
+		req := &services.FilterProductsRequest{
+			UserID:      1,
+			MinPrice:    50,
+			MaxPrice:    60,
+			ProductName: "Product",
+		}
+
+		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			service.GetUserProducts(1) // User with 10 products
+			service.GetFilteredProducts(req)
 		}
 	})
 
-	b.Run("Large List (100 items)", func(b *testing.B) {
+	b.Run("Large Result Set (50 products)", func(b *testing.B) {
+		req := &services.FilterProductsRequest{
+			UserID:      1,
+			MinPrice:    50,
+			MaxPrice:    100,
+			ProductName: "Product",
+		}
+
+		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			service.GetUserProducts(2) // User with 100 products
+			service.GetFilteredProducts(req)
 		}
 	})
 }
 
-func setupBenchmarkService() ProductService {
-	db := setupBenchmarkDB()
-	repo := postgres.NewProductRepository(db)
-	cache := setupBenchmarkCache()
-	return services.NewProductService(repo, nil, cache)
+func BenchmarkCacheOperations(b *testing.B) {
+	_, _, cache := setupBenchmarkEnvironment(b)
+	ctx := context.Background()
+
+	product := &models.Product{
+		ID:          1,
+		ProductName: "Cache Test Product",
+	}
+
+	b.Run("Cache Set", func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			cache.Set(ctx, fmt.Sprintf("product:%d", i), product, time.Hour)
+		}
+	})
+
+	b.Run("Cache Get", func(b *testing.B) {
+		// Pre-populate cache
+		cache.Set(ctx, "product:1", product, time.Hour)
+
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			var p models.Product
+			cache.Get(ctx, "product:1", &p)
+		}
+	})
 }

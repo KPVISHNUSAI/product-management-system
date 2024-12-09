@@ -1,16 +1,25 @@
 package handlers
 
 import (
+	"log"
+	"net/http"
+
+	"github.com/KPVISHNUSAI/product-management-system/api/models"
 	"github.com/KPVISHNUSAI/product-management-system/api/services"
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
-type AuthHandler struct {
-	userService *services.UserService
+type UserService interface {
+	CreateUser(req *services.CreateUserRequest) (*models.AppUser, error)
+	ValidateCredentials(email, password string) (*models.AppUser, error)
+	GenerateToken(user *models.AppUser) (string, error)
 }
 
-func NewAuthHandler(service *services.UserService) *AuthHandler {
+type AuthHandler struct {
+	userService UserService
+}
+
+func NewAuthHandler(service UserService) *AuthHandler {
 	return &AuthHandler{userService: service}
 }
 
@@ -35,22 +44,28 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
+
+	// Bind the JSON request body
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Validate credentials
 	user, err := h.userService.ValidateCredentials(req.Email, req.Password)
 	if err != nil {
+		log.Println("ValidateCredentials failed:", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
+	// Generate token
 	token, err := h.userService.GenerateToken(user)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
 		return
 	}
 
+	// Return the token
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }

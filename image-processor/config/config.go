@@ -2,6 +2,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -31,6 +33,9 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	viper.SetConfigFile(".env")
+	if err := viper.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("Error reading config file, %s", err)
+	}
 	viper.AutomaticEnv()
 
 	viper.SetDefault("POSTGRES_HOST", "localhost")
