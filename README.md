@@ -1,4 +1,4 @@
-# 🚀 Zocket Product Management System
+# Product Management System
 
 A **scalable backend system** built with **Go** for managing products, featuring **asynchronous image processing**, **Redis caching**, **RabbitMQ messaging**, and **AWS S3 storage**. 
 
