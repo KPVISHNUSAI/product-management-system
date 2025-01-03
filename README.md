@@ -274,7 +274,7 @@ This project is licensed under the **MIT License**. See `LICENSE` for details.
 For any queries:  
 - Create a GitHub issue  
 - Submit a pull request  
-- Contact: kk4563@srmist.edu.in 
+- Contact: kpvishnusai1111@gmail.com , kk4563@srmist.edu.in 
 - RegNo: RA2111003011135
 
 🎉 **Happy coding!**
